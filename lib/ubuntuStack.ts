@@ -21,7 +21,9 @@ export class UbuntuStack extends Stack {
         subnetType: ec2.SubnetType.PUBLIC
       },
       instanceType: ec2.InstanceType.of(ec2.InstanceClass.T2, ec2.InstanceSize.MICRO),
-      machineImage: ec2.MachineImage.genericLinux({ 'ap-northeast-1': 'ami-0d52744d6551d851e' }),
+      machineImage: ec2.MachineImage.genericLinux({
+        'ap-northeast-1': 'ami-0d52744d6551d851e'
+      }),
       role: props.role,
       keyName: 'ssh-key'
     })

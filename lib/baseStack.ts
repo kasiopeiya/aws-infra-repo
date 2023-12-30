@@ -9,6 +9,10 @@ export class BaseStack extends Stack {
   constructor (scope: Construct, id: string, props?: StackProps) {
     super(scope, id, props)
 
+    /*
+    *
+    -------------------------------------------------------------------------- */
+    // IAM Role
     this.instanceRole = new iam.Role(this, 'instanceIamRole', {
       assumedBy: new iam.ServicePrincipal('ec2.amazonaws.com'),
       roleName: 'InstanceBasicRole',

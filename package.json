@@ -10,7 +10,7 @@
     "test": "jest",
     "cdk": "cdk",
     "prepare": "husky install",
-    "format": "prettier --write *.ts",
+    "format": "prettier --write '*/**/*.ts'",
     "lint-fix": "prettier --write '*/**/*.ts' && eslint '*/**/*.ts' --max-warnings 0 --fix"
   },
   "devDependencies": {
