@@ -12,7 +12,7 @@
     "prepare": "husky install",
     "format": "prettier --write '*/**/*.ts'",
     "lint": "eslint '*/**/*.ts' --max-warnings 0 --fix",
-    "lint-fix": "prettier --write '*/**/*.ts' && eslint '*/**/*.ts' --max-warnings 0 --fix"
+    "lint-fix": "prettier --write '*/**/*.ts' && eslint '*/**/*.ts' --max-warnings 0"
   },
   "devDependencies": {
     "@types/jest": "^29.5.2",
