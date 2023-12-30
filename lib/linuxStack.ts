@@ -10,7 +10,7 @@ interface LinuxStackProps extends StackProps {
 }
 
 export class LinuxStack extends Stack {
-  constructor (scope: Construct, id: string, props: LinuxStackProps) {
+  constructor(scope: Construct, id: string, props: LinuxStackProps) {
     super(scope, id, props)
 
     const defaultVpc = ec2.Vpc.fromLookup(this, 'DefaultVPC', { isDefault: true })

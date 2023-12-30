@@ -6,7 +6,7 @@ import { type Construct } from 'constructs'
 export class BaseStack extends Stack {
   public readonly instanceRole: iam.IRole
 
-  constructor (scope: Construct, id: string, props?: StackProps) {
+  constructor(scope: Construct, id: string, props?: StackProps) {
     super(scope, id, props)
 
     /*

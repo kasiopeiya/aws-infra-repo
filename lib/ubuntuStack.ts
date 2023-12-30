@@ -10,7 +10,7 @@ interface UbuntuStackProps extends StackProps {
 }
 
 export class UbuntuStack extends Stack {
-  constructor (scope: Construct, id: string, props: UbuntuStackProps) {
+  constructor(scope: Construct, id: string, props: UbuntuStackProps) {
     super(scope, id, props)
 
     const defaultVpc = ec2.Vpc.fromLookup(this, 'DefaultVPC', { isDefault: true })
