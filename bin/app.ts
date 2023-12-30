@@ -10,7 +10,7 @@ const app = new cdk.App()
 
 const envKey: string = app.node.tryGetContext('env')
 if (envKey === undefined) {
-    throw new Error('Please specify environment with context option. ex) cdk deploy -c env=dev')
+  throw new Error('Please specify environment with context option. ex) cdk deploy -c env=dev')
 }
 const envValues = app.node.tryGetContext(envKey)
 if (envValues === undefined) throw new Error('Invalid Environment')
@@ -23,12 +23,12 @@ const baseStack = new BaseStack(app, 'BaseStack', { env })
 /
 ----------------------------------------------------------------------------- */
 new LinuxStack(app, 'LinuxStack', {
-    env,
-    role: baseStack.instanceRole
+  env,
+  role: baseStack.instanceRole
 })
 new UbuntuStack(app, 'UbuntuStack', {
-    env,
-    role: baseStack.instanceRole
+  env,
+  role: baseStack.instanceRole
 })
 
 // function getConfig (envKey: string) {
