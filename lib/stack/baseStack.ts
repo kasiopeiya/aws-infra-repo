@@ -10,8 +10,17 @@ export class BaseStack extends Stack {
     super(scope, id, props)
 
     /*
-    *
+    * IAM
     -------------------------------------------------------------------------- */
+    // IAM User ECS
+    new iam.User(this, 'IAMUserECS', {
+      userName: 'ecs-user',
+      managedPolicies: [
+        iam.ManagedPolicy.fromAwsManagedPolicyName('AmazonECS_FullAccess'),
+        iam.ManagedPolicy.fromAwsManagedPolicyName('AmazonEC2ContainerRegistryFullAccess')
+      ]
+    })
+
     // IAM Role
     this.instanceRole = new iam.Role(this, 'instanceIamRole', {
       assumedBy: new iam.ServicePrincipal('ec2.amazonaws.com'),
