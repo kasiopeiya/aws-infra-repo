@@ -1,7 +1,6 @@
 import { Stack, type StackProps } from 'aws-cdk-lib'
-import * as iam from 'aws-cdk-lib/aws-iam'
-
 import { type Construct } from 'constructs'
+import * as iam from 'aws-cdk-lib/aws-iam'
 
 export class BaseStack extends Stack {
   public readonly instanceRole: iam.IRole

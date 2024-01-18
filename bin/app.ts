@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 import * as cdk from 'aws-cdk-lib'
 
-import { LinuxStack } from '../lib/linuxStack'
-import { UbuntuStack } from '../lib/ubuntuStack'
-import { BaseStack } from '../lib/baseStack'
+import { LinuxStack } from '../lib/stack/linuxStack'
+import { UbuntuStack } from '../lib/stack/ubuntuStack'
+import { BaseStack } from '../lib/stack/baseStack'
+import { EcsFargateStack } from '../lib/stack/ecsFargateStack'
 // import { devConfig, prodConfig } from '../config'
 
 const app = new cdk.App()
@@ -17,19 +18,27 @@ if (envValues === undefined) throw new Error('Invalid Environment')
 const env = { account: envValues.env.account, region: envValues.env.region }
 // const config = getConfig(envKey)
 
-const baseStack = new BaseStack(app, 'BaseStack', { env })
+/*
+* Base
+-------------------------------------------------------------------------- */
+const baseStack = new BaseStack(app, 'base-stack', { env })
 
 /*
-/
------------------------------------------------------------------------------ */
-new LinuxStack(app, 'LinuxStack', {
+* EC2
+-------------------------------------------------------------------------- */
+new LinuxStack(app, 'ec2-linux-stack', {
   env,
   role: baseStack.instanceRole
 })
-new UbuntuStack(app, 'UbuntuStack', {
+new UbuntuStack(app, 'ec2-ubuntu-stack', {
   env,
   role: baseStack.instanceRole
 })
+
+/*
+* ECS
+-------------------------------------------------------------------------- */
+new EcsFargateStack(app, 'ecs-fargate-stack', { env })
 
 // function getConfig (envKey: string) {
 //   if (envKey === 'dev') { return devConfig } else if (envKey === 'prod') { return prodConfig } else { throw new Error('No Support environment') }

@@ -1,8 +1,8 @@
 {
-  "vpc-provider:account=134161968696:filter.isDefault=true:region=ap-northeast-1:returnAsymmetricSubnets=true": {
+  "vpc-provider:account=******:filter.isDefault=true:region=ap-northeast-1:returnAsymmetricSubnets=true": {
     "vpcId": "vpc-b19d83d6",
     "vpcCidrBlock": "172.31.0.0/16",
-    "ownerAccountId": "134161968696",
+    "ownerAccountId": "******",
     "availabilityZones": [],
     "subnetGroups": [
       {
