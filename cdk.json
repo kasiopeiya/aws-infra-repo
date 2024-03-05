@@ -21,13 +21,13 @@
     "env": "dev",
     "dev": {
       "env": {
-        "account": "*******",
+        "account": "134161968696",
         "region": "ap-northeast-1"
       }
     },
     "prd": {
       "env": {
-        "account": "*******",
+        "account": "134161968696",
         "region": "ap-northeast-2"
       }
     }

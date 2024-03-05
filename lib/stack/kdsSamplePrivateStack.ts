@@ -7,14 +7,16 @@ import * as lambda_ from 'aws-cdk-lib/aws-lambda'
 import { SqsDlq } from 'aws-cdk-lib/aws-lambda-event-sources'
 import * as sqs from 'aws-cdk-lib/aws-sqs'
 import * as iam from 'aws-cdk-lib/aws-iam'
+import * as ec2 from 'aws-cdk-lib/aws-ec2'
 import * as apigw from 'aws-cdk-lib/aws-apigateway'
 
-interface KdsSampleStackProps extends StackProps {
+interface KdsSamplePrivateStackProps extends StackProps {
   prefix: string
+  vpcId: string
 }
 
-export class KdsSampleStack extends Stack {
-  constructor(scope: Construct, id: string, props: KdsSampleStackProps) {
+export class KdsSamplePrivateStack extends Stack {
+  constructor(scope: Construct, id: string, props: KdsSamplePrivateStackProps) {
     super(scope, id, props)
 
     /*
@@ -29,6 +31,22 @@ export class KdsSampleStack extends Stack {
     /*
     * Producer側
     -------------------------------------------------------------------------- */
+    // VPC(既存)
+    const vpc = ec2.Vpc.fromLookup(this, 'Vpc', { vpcId: props.vpcId })
+    // VPCエンドポイント用SG
+    const vpcEndpointSecurityGroup = new ec2.SecurityGroup(this, 'vpcEndpointSecurityGroup', {
+      vpc
+    })
+    vpcEndpointSecurityGroup.addIngressRule(ec2.Peer.ipv4(vpc.vpcCidrBlock), ec2.Port.allTcp())
+    // VPC エンドポイント
+    const privateApiVpcEndpoint = new ec2.InterfaceVpcEndpoint(this, 'privateApiVpcEndpoint', {
+      vpc,
+      service: ec2.InterfaceVpcEndpointAwsService.APIGATEWAY,
+      subnets: { subnets: vpc.publicSubnets },
+      securityGroups: [vpcEndpointSecurityGroup],
+      open: false
+    })
+
     // IAM Role
     const role = new iam.Role(this, 'Role', {
       assumedBy: new iam.ServicePrincipal('apigateway.amazonaws.com'),
@@ -47,8 +65,28 @@ export class KdsSampleStack extends Stack {
         stageName: 'dev'
       },
       endpointConfiguration: {
-        types: [apigw.EndpointType.REGIONAL]
-      }
+        types: [apigw.EndpointType.PRIVATE],
+        vpcEndpoints: [privateApiVpcEndpoint]
+      },
+      policy: new iam.PolicyDocument({
+        statements: [
+          new iam.PolicyStatement({
+            effect: iam.Effect.DENY,
+            principals: [new iam.AnyPrincipal()],
+            actions: ['execute-api:Invoke'],
+            resources: ['execute-api:/*'],
+            conditions: {
+              StringNotEquals: { 'aws:sourceVpce': privateApiVpcEndpoint.vpcEndpointId }
+            }
+          }),
+          new iam.PolicyStatement({
+            effect: iam.Effect.ALLOW,
+            principals: [new iam.AnyPrincipal()],
+            actions: ['execute-api:Invoke'],
+            resources: ['execute-api:/*']
+          })
+        ]
+      })
     })
 
     // エンドポイントの追加
@@ -141,13 +179,13 @@ export class KdsSampleStack extends Stack {
     func.addEventSourceMapping('EventSourceMapping', {
       enabled: true,
       eventSourceArn: stream.streamArn,
-      bisectBatchOnError: true, // 処理エラー時にバッチを２分割
-      batchSize: 8, // 関数あたりの処理レコード数
+      bisectBatchOnError: true,
+      batchSize: 2, // バッファサイズ
       maxBatchingWindow: Duration.seconds(10), // バッファリングインターバル
       maxRecordAge: Duration.seconds(60), // レコード期限切れまでの時間
-      parallelizationFactor: 1, // シャードあたり起動させる関数の数
-      reportBatchItemFailures: false, // エラー処理のレポート
-      retryAttempts: 4, // リトライ回数
+      parallelizationFactor: 1,
+      reportBatchItemFailures: false,
+      retryAttempts: 2,
       startingPosition: lambda_.StartingPosition.TRIM_HORIZON,
       onFailure: new SqsDlq(deadLetterQueue)
     })
