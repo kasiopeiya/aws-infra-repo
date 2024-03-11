@@ -4,17 +4,18 @@ import { HttpRequest } from '@aws-sdk/protocol-http'
 import { type HttpRequest as HttpRequest_, type AwsCredentialIdentity } from '@smithy/types'
 import { Sha256 } from '@aws-crypto/sha256-js'
 import { Agent as HttpsAgent } from 'https'
+import * as winston from 'winston'
 
 // 実行条件
-const executionCount = 5 // リクエスト送信回数
+const executionCount = 1 // リクエスト送信回数
 const executionInterval = 5 // 送信インターバル(秒)
-const recordNumberPerRequest = 10 // リクエストあたりレコード数
+const recordNumberPerRequest = 300 // リクエストあたりレコード数
 const recordSize = 10 // １レコードのサイズ
 
 // API GW設定
 const streamName = 'test-kds-sample-adv-stream'
 const url_ = new URL(
-  `https://35cyilgabc.execute-api.ap-northeast-1.amazonaws.com/dev/streams/${streamName}/records`
+  `https://a313aumlu1.execute-api.ap-northeast-1.amazonaws.com/dev/streams/${streamName}/records`
 )
 
 // 認証情報: 環境変数にセット済み前提
@@ -27,6 +28,20 @@ const credentials_: AwsCredentialIdentity = {
   accessKeyId: accessKey_,
   secretAccessKey: secretAccessKey_
 }
+
+// Logger
+const logger = winston.createLogger({
+  level: 'info',
+  format: winston.format.combine(
+    winston.format.timestamp(),
+    winston.format.cli(),
+    winston.format.printf((info) => `[${info.timestamp}]${info.level}${info.message}`)
+  ),
+  transports: [
+    new winston.transports.Console(),
+    new winston.transports.File({ filename: 'kinesisPutRecordSample.log' })
+  ]
+})
 
 interface KinesisRecordType {
   data: string
@@ -119,15 +134,15 @@ async function sendRequest(httpRequest: HttpRequest_, retries: number = 3): Prom
       }),
       data: httpRequest.body
     })
-    console.log(`status: ${response.status}, data: ${response.data}`)
+    logger.info(`status: ${response.status}, data: ${response.data}`)
   } catch (e: any) {
     if (retries > 0) {
       // スロットリングエラーの場合、即時リトライしてもエラーになるので待機
       await wait(1)
-      console.log(`Request failed. Retrying... (${retries} retries left)`)
+      logger.warn(`Request failed. Retrying... (${retries} retries left)`)
       await sendRequest(httpRequest, retries - 1)
     } else {
-      console.log(e)
+      logger.error(e)
     }
   }
 }
@@ -184,3 +199,4 @@ const main = async (): Promise<void> => {
 }
 
 void main()
+logger.info('hoge')

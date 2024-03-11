@@ -14,6 +14,8 @@ interface KdsPublicApiGwProducerProps {
  * API Gateway: Private REST API for Kineis Data Streams
  */
 export class KdsPublicApiGwProducer extends Construct {
+  public readonly restApi: apigw.RestApi
+
   constructor(scope: Construct, id: string, props: KdsPublicApiGwProducerProps) {
     super(scope, id)
 
@@ -58,7 +60,7 @@ export class KdsPublicApiGwProducer extends Construct {
     }
 
     // REST API
-    const restApi = new apigw.RestApi(this, 'RestApi', {
+    this.restApi = new apigw.RestApi(this, 'RestApi', {
       restApiName: `${props.prefix}-rest-api`,
       deployOptions: deployOption,
       endpointConfiguration: {
@@ -67,7 +69,7 @@ export class KdsPublicApiGwProducer extends Construct {
     })
 
     // エンドポイントの追加
-    const streamsResource = restApi.root.addResource('streams')
+    const streamsResource = this.restApi.root.addResource('streams')
     const streamNameResource = streamsResource.addResource('{stream-name}')
     const recordsResource = streamNameResource.addResource('records')
 

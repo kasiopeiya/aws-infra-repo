@@ -9,6 +9,7 @@ import { KdsSamplePrivateStack } from '../lib/stack/kdsSamplePrivateStack'
 import { KdsSampleStack } from '../lib/stack/kdsSampleStack'
 import { KdsSampleAdvStack } from '../lib/stack/kdsSampleAdvStack'
 import { DynamoDBStack } from '../lib/stack/dynamoDBStack'
+import { KdsMonitoringStack } from '../lib/stack/kdsMonitoringStack'
 
 const app = new cdk.App()
 
@@ -67,8 +68,15 @@ new KdsSampleStack(app, 'test-kds-sample-stack', {
   prefix: 'test-kds-sample'
 })
 
-new KdsSampleAdvStack(app, 'test-kds-sample-adv-stack', {
+const kdsSampleAdvStack = new KdsSampleAdvStack(app, 'test-kds-sample-adv-stack', {
   env,
   prefix: 'test-kds-sample-adv',
   vpcId: 'vpc-b19d83d6'
+})
+
+new KdsMonitoringStack(app, 'test-kds-monitoring', {
+  prefix: 'test-kds-monitoring',
+  restApi: kdsSampleAdvStack.restApi,
+  dataStream: kdsSampleAdvStack.dataStream,
+  lambdaFunction: kdsSampleAdvStack.kdsConsumerFunc
 })

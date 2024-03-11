@@ -10,7 +10,7 @@ import * as iam from 'aws-cdk-lib/aws-iam'
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb'
 import { type Stream } from 'aws-cdk-lib/aws-kinesis'
 
-interface kdsLambdaDynamoConsumerProps {
+interface KdsLambdaDynamoConsumerProps {
   prefix: string
   dataStream: Stream
   lambdaEntry: string
@@ -21,7 +21,9 @@ interface kdsLambdaDynamoConsumerProps {
  * Kinesis Lambda Consumer with DynamoDB
  */
 export class KdsLambdaDynamoConsumer extends Construct {
-  constructor(scope: Construct, id: string, props: kdsLambdaDynamoConsumerProps) {
+  public readonly kdsConsumerFunction: lambda_.Function
+
+  constructor(scope: Construct, id: string, props: KdsLambdaDynamoConsumerProps) {
     super(scope, id)
 
     props.billing ??= dynamodb.Billing.provisioned({
@@ -54,15 +56,20 @@ export class KdsLambdaDynamoConsumer extends Construct {
     const powertoolsLayer = new LambdaPowertoolsLayer(this, 'Layer', {
       runtimeFamily: lambda_.RuntimeFamily.NODEJS
     })
+    const layer = new lambda_.LayerVersion(this, 'CustomLayer', {
+      removalPolicy: RemovalPolicy.DESTROY,
+      code: lambda_.Code.fromAsset('./resources/lambda_layer/kinesis'),
+      compatibleArchitectures: [lambda_.Architecture.X86_64, lambda_.Architecture.ARM_64]
+    })
 
     // Lambda Function
-    const func = new nodejsLambda.NodejsFunction(this, 'LambdaFunc', {
+    this.kdsConsumerFunction = new nodejsLambda.NodejsFunction(this, 'LambdaFunc', {
       functionName: `${props.prefix}-kds-consumer-func`,
       entry: props.lambdaEntry,
       handler: 'handler',
       runtime: lambda_.Runtime.NODEJS_18_X,
       architecture: lambda_.Architecture.ARM_64,
-      memorySize: 1024,
+      memorySize: 512,
       initialPolicy: [
         new iam.PolicyStatement({
           actions: ['xray:*'],
@@ -72,17 +79,18 @@ export class KdsLambdaDynamoConsumer extends Construct {
       environment: {
         TABLE_NAME: table.tableName
       },
-      layers: [powertoolsLayer],
+      layers: [powertoolsLayer, layer],
       tracing: lambda_.Tracing.ACTIVE,
-      insightsVersion: lambda_.LambdaInsightsVersion.VERSION_1_0_229_0
+      insightsVersion: lambda_.LambdaInsightsVersion.VERSION_1_0_229_0,
+      timeout: Duration.minutes(2)
     })
 
     // Lambda Event Source Mapping
-    func.addEventSourceMapping('EventSourceMapping', {
+    this.kdsConsumerFunction.addEventSourceMapping('EventSourceMapping', {
       enabled: true,
       eventSourceArn: props.dataStream.streamArn,
       bisectBatchOnError: true, // 処理エラー時にバッチを２分割
-      batchSize: 50, // 関数あたりの処理レコード数
+      batchSize: 300, // 関数あたりの処理レコード数
       maxBatchingWindow: Duration.seconds(3), // バッファリングインターバル
       maxRecordAge: Duration.seconds(500), // レコード期限切れまでの時間
       parallelizationFactor: 1, // シャードあたり起動させる関数の数
@@ -94,13 +102,13 @@ export class KdsLambdaDynamoConsumer extends Construct {
 
     // CloudWatch Logs: LogGroup
     new logs.LogGroup(this, 'LambdaLogGroup', {
-      logGroupName: `/aws/lambda/${func.functionName}`,
+      logGroupName: `/aws/lambda/${this.kdsConsumerFunction.functionName}`,
       removalPolicy: RemovalPolicy.DESTROY,
       retention: logs.RetentionDays.ONE_DAY
     })
 
     // 関数からDynamoDBヘのアクセス許可
-    table.grantReadWriteData(func)
-    props.dataStream.grantRead(func)
+    table.grantReadWriteData(this.kdsConsumerFunction)
+    props.dataStream.grantRead(this.kdsConsumerFunction)
   }
 }

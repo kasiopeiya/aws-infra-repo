@@ -3,6 +3,7 @@ import middy from '@middy/core'
 import { ConditionalCheckFailedException, DynamoDBClient } from '@aws-sdk/client-dynamodb'
 import { DeleteCommand, PutCommand, DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb'
 import { KinesisClient } from '@aws-sdk/client-kinesis'
+import * as winston from 'winston'
 
 interface KinesisRecord {
   kinesis: {
@@ -36,6 +37,17 @@ const tableName = process.env.TABLE_NAME
 
 const tracer = new Tracer({ serviceName: 'KinesisConsumerLambda' })
 
+// Logger
+const logger = winston.createLogger({
+  level: 'info',
+  format: winston.format.combine(
+    winston.format.timestamp(),
+    winston.format.cli(),
+    winston.format.printf((info) => `[${info.timestamp}] ${info.level} ${info.message}`)
+  ),
+  transports: [new winston.transports.Console()]
+})
+
 /**
  * ハンドラー関数
  * @param event
@@ -66,21 +78,17 @@ const lambdaHandler = async (event: unknown): Promise<any> => {
       ConditionExpression: 'attribute_not_exists(id)' // 条件付き書き込み
     })
     try {
-      // テストで特定のidの時だけエラーになるように仕込み
-      // if (id_ === 'id-25-1') {
-      //   throw new Error()
-      // }
       // アイテムの登録
       const response = await docClient.send(command)
-      console.log(`INFO: id=${id_}, statusCode=${response.$metadata.httpStatusCode}`)
+      logger.info(`SUCCESS: id=${id_}, statusCode=${response.$metadata.httpStatusCode}`)
     } catch (e: any) {
       if (e instanceof ConditionalCheckFailedException) {
         // 条件付き書き込みエラー, アイテムがテーブルにすでにあった場合
-        console.log(`WARNING: id=${id_} 登録済みのため処理をスキップします`)
+        logger.warn(`RETRY: id=${id_} 登録済みのため処理をスキップします`)
         continue
       } else {
         // それ以外のエラーの場合, DynamoDBのスロットリングなど
-        console.log(`ERROR: id=${id_} エラーのため処理を中断します`)
+        logger.error(`FAILED: id=${id_} エラーのため処理を中断します`)
         // エラー処理のレポート, エラーになったところから処理を再開させるためsequenceNumberを返す
         return {
           batchItemFailures: [{ itemIdentifier: record.kinesis.sequenceNumber }]
@@ -90,10 +98,6 @@ const lambdaHandler = async (event: unknown): Promise<any> => {
 
     // やりたい処理を記載
     try {
-      // テストで特定のidの時だけエラーになるように仕込み
-      // if (id_ === 'id-25-1') {
-      //   throw new Error()
-      // }
       console.log('処理実行しました')
     } catch (e: any) {
       // DynamoDBからレコード削除
