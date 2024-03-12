@@ -1,9 +1,15 @@
-import { Duration, Stack, type StackProps } from 'aws-cdk-lib'
+import { Duration, RemovalPolicy, Stack, type StackProps } from 'aws-cdk-lib'
 import { type Construct } from 'constructs'
 import * as cw from 'aws-cdk-lib/aws-cloudwatch'
 import { type Stream } from 'aws-cdk-lib/aws-kinesis'
 import { type Function as LambdaFunction } from 'aws-cdk-lib/aws-lambda'
 import { type RestApi } from 'aws-cdk-lib/aws-apigateway'
+import * as nodejsLambda from 'aws-cdk-lib/aws-lambda-nodejs'
+import * as lambda_ from 'aws-cdk-lib/aws-lambda'
+import * as events from 'aws-cdk-lib/aws-events'
+import * as targets from 'aws-cdk-lib/aws-events-targets'
+import * as iam from 'aws-cdk-lib/aws-iam'
+import * as logs from 'aws-cdk-lib/aws-logs'
 
 interface KdsMonitoringStackProps extends StackProps {
   prefix: string
@@ -226,7 +232,41 @@ export class KdsMonitoringStack extends Stack {
     dashboard.addWidgets(ThrottlesWid, DuplicatedRecordCountWId)
 
     /*
-    * Alerm
+    * Custom Metrics Kinesis Shard Count
     -------------------------------------------------------------------------- */
+    // Lambda Function
+    const lambdaFunc = new nodejsLambda.NodejsFunction(this, 'LambdaFunc', {
+      functionName: `${props.prefix}-put-metrics-func`,
+      entry: './resources/lambda/kdsShardCount/index.ts',
+      handler: 'handler',
+      runtime: lambda_.Runtime.NODEJS_18_X,
+      architecture: lambda_.Architecture.ARM_64,
+      initialPolicy: [
+        new iam.PolicyStatement({
+          actions: [
+            'cloudwatch:PutMetricStream',
+            'cloudwatch:PutMetricData',
+            'kinesis:DescribeStreamSummary'
+          ],
+          resources: ['*']
+        })
+      ],
+      environment: {
+        DATA_STREAM_NAME: props.dataStream.streamName
+      }
+    })
+
+    // CloudWatch Logs: LogGroup
+    new logs.LogGroup(this, 'LambdaLogGroup', {
+      logGroupName: `/aws/lambda/${lambdaFunc.functionName}`,
+      removalPolicy: RemovalPolicy.DESTROY,
+      retention: logs.RetentionDays.ONE_DAY
+    })
+
+    // EventBridge Schedule Rule
+    new events.Rule(this, 'Rule', {
+      schedule: events.Schedule.cron({ minute: '0/1', hour: '*', day: '*' }),
+      targets: [new targets.LambdaFunction(lambdaFunc, { retryAttempts: 3 })]
+    })
   }
 }
