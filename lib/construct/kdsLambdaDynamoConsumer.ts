@@ -56,11 +56,11 @@ export class KdsLambdaDynamoConsumer extends Construct {
     const powertoolsLayer = new LambdaPowertoolsLayer(this, 'Layer', {
       runtimeFamily: lambda_.RuntimeFamily.NODEJS
     })
-    const layer = new lambda_.LayerVersion(this, 'CustomLayer', {
-      removalPolicy: RemovalPolicy.DESTROY,
-      code: lambda_.Code.fromAsset('./resources/lambda_layer/kinesis'),
-      compatibleArchitectures: [lambda_.Architecture.X86_64, lambda_.Architecture.ARM_64]
-    })
+    // const layer = new lambda_.LayerVersion(this, 'CustomLayer', {
+    //   removalPolicy: RemovalPolicy.DESTROY,
+    //   code: lambda_.Code.fromAsset('./resources/lambda_layer/kinesis'),
+    //   compatibleArchitectures: [lambda_.Architecture.X86_64, lambda_.Architecture.ARM_64]
+    // })
 
     // Lambda Function
     this.kdsConsumerFunction = new nodejsLambda.NodejsFunction(this, 'LambdaFunc', {
@@ -79,10 +79,12 @@ export class KdsLambdaDynamoConsumer extends Construct {
       environment: {
         TABLE_NAME: table.tableName
       },
-      layers: [powertoolsLayer, layer],
+      // layers: [powertoolsLayer, layer],
+      layers: [powertoolsLayer],
       tracing: lambda_.Tracing.ACTIVE,
       insightsVersion: lambda_.LambdaInsightsVersion.VERSION_1_0_229_0,
-      timeout: Duration.minutes(2)
+      timeout: Duration.minutes(2),
+      depsLockFilePath: './resources/lambda/kinesis/package-lock.json'
     })
 
     // Lambda Event Source Mapping
@@ -107,7 +109,7 @@ export class KdsLambdaDynamoConsumer extends Construct {
       retention: logs.RetentionDays.ONE_DAY
     })
 
-    // 関数からDynamoDBヘのアクセス許可
+    // Lambda関数からDynamoDBヘのアクセスを許可する
     table.grantReadWriteData(this.kdsConsumerFunction)
     props.dataStream.grantRead(this.kdsConsumerFunction)
   }

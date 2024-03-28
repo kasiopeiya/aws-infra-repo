@@ -10,6 +10,7 @@ import { KdsSampleStack } from '../lib/stack/kdsSampleStack'
 import { KdsSampleAdvStack } from '../lib/stack/kdsSampleAdvStack'
 import { DynamoDBStack } from '../lib/stack/dynamoDBStack'
 import { KdsMonitoringStack } from '../lib/stack/kdsMonitoringStack'
+import { DeployToS3PipelineStack } from '../lib/stack/codeCommitToS3Stack'
 
 const app = new cdk.App()
 
@@ -79,4 +80,11 @@ new KdsMonitoringStack(app, 'test-kds-monitoring', {
   restApi: kdsSampleAdvStack.restApi,
   dataStream: kdsSampleAdvStack.dataStream,
   lambdaFunction: kdsSampleAdvStack.kdsConsumerFunc
+})
+
+new DeployToS3PipelineStack(app, 'test-code-commit-s3-stack', {
+  codeCommitRepoName: 'ts-kds-guide',
+  deployS3BucketName: 'kasio-sample-bucket',
+  buildCommands: ['rm -R .vscode', 'rm .gitignore', 'zip -r dataStreamingGuide.zip .'],
+  artifactName: 'dataStreamingGuide.zip'
 })
