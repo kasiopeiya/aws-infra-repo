@@ -1,0 +1,130 @@
+pom.xml の全体
+
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>com.example</groupId>
+    <artifactId>kinesis-producer-example</artifactId>
+    <version>1.0-SNAPSHOT</version>
+    <properties>
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
+    </properties>
+    <dependencies>
+        <!-- AWS SDK for Java -->
+        <dependency>
+            <groupId>com.amazonaws</groupId>
+            <artifactId>aws-java-sdk-kinesis</artifactId>
+            <version>1.12.239</version>
+        </dependency>
+        <!-- Kinesis Producer Library -->
+        <dependency>
+            <groupId>com.amazonaws</groupId>
+            <artifactId>amazon-kinesis-producer</artifactId>
+            <version>0.14.7</version>
+        </dependency>
+    </dependencies>
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.8.1</version>
+                <configuration>
+                    <source>1.8</source>
+                    <target>1.8</target>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <version>3.3.0</version>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <mainClass>com.example.KPLExample</mainClass>
+                        </manifest>
+                    </archive>
+                    <descriptorRefs>
+                        <descriptorRef>jar-with-dependencies</descriptorRef>
+                    </descriptorRefs>
+                </configuration>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>
+
+
+Javaプログラム (KPLExample.java)
+以下の内容で src/main/java/com/example/KPLExample.java を作成してください。
+
+package com.example;
+
+import com.amazonaws.services.kinesis.producer.KinesisProducer;
+import com.amazonaws.services.kinesis.producer.KinesisProducerConfiguration;
+import com.amazonaws.services.kinesis.producer.UserRecordResult;
+
+import java.nio.ByteBuffer;
+import java.util.concurrent.ExecutionException;
+
+public class KPLExample {
+    public static void main(String[] args) {
+        // Kinesis Stream名とリージョン
+        String streamName = "YOUR_STREAM_NAME";
+        String region = "YOUR_AWS_REGION";
+
+        // Kinesis Producerの設定
+        KinesisProducerConfiguration config = new KinesisProducerConfiguration();
+        config.setRegion(region);
+
+        // Kinesis Producerのインスタンスを作成
+        KinesisProducer producer = new KinesisProducer(config);
+
+        // 送信するデータ
+        String partitionKey = "partitionKey";
+        ByteBuffer data = ByteBuffer.wrap("Hello, Kinesis!".getBytes());
+
+        try {
+            // データをKinesis Streamに送信
+            UserRecordResult result = producer.addUserRecord(streamName, partitionKey, data).get();
+
+            // 送信結果の確認
+            if (result.isSuccessful()) {
+                System.out.println("Record successfully sent to Kinesis.");
+            } else {
+                System.err.println("Failed to send record to Kinesis.");
+            }
+        } catch (InterruptedException | ExecutionException e) {
+            e.printStackTrace();
+        } finally {
+            // プロデューサーをシャットダウン
+            producer.flushSync();
+            producer.destroy();
+        }
+    }
+}
+
+
+
+プロジェクトのビルドと実行
+Mavenプロジェクトをビルドします。
+sh
+Copy code
+mvn clean package
+ビルドが成功すると、ターゲットディレクトリに依存関係を含む実行可能なJARファイル (kinesis-producer-example-1.0-SNAPSHOT-jar-with-dependencies.jar) が作成されます。
+
+Javaプログラムを実行します。
+
+sh
+Copy code
+java -jar target/kinesis-producer-example-1.0-SNAPSHOT-jar-with-dependencies.jar
+これで、Kinesis Producer Libraryを使ってKinesis Data Streamsにデータを送信する最小のサンプルプログラムが実行されます。プログラムが正常に動作するためには、AWS認証情報が正しく設定されていること、およびKinesis Data Streamが存在していることを確認してください。
